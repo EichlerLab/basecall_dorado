@@ -1,0 +1,248 @@
+BASECALL_DORADO_DIR_PATTERN = "{sample}/raw_data/nanopore/{seq_type}/fastq/{run_id}/dorado/{version}/{model}/"
+BASECALL_DORADO_FASTQ_PATTERN = "{date}_{sample}_{seq_type}_{inst}-{slot}-{flowcell}_dorado-{version}-{model}_fastq_{fastq_set}.fastq.gz"
+BASECALL_DORADO_BAM_PATTERN = "{date}_{sample}_{seq_type}_{inst}-{slot}-{flowcell}_dorado-{version}-{model}_fastq_{fastq_set}.bam"
+
+BC_ARGS = config.get("bc_args", "")
+
+BASECALL_DORADO_META_PATTERN = "{run_id}_dorado_metadata.tar.gz"
+BASECALL_DORADO_INFO_PATTERN = "{run_id}_info.tsv.gz"
+BASECALL_DORADO_MD5_PATTERN = "{run_id}.md5"
+
+mem_dict = {1: "12", 2 : "60"}
+
+
+def _gather_dorado_files(wildcards):
+    return [
+        ".basecall_meth/{sample}.{seq_type}.{run_id}.{profile}.dorado.zip_done".format(
+            sample=index[0], seq_type=index[1], run_id=index[2], profile=index[3]
+        )
+        for index in CELL_DF.index
+    ]
+
+
+rule basecall_all:
+    input:
+        _gather_dorado_files,
+
+
+rule basecall_dorado:
+    input:
+        copy_record="{sample}/raw_data/nanopore/{seq_type}/copy_record/fast5/{run_id}.tab.gz",
+    output:
+        flag=".basecall_meth/{sample}.{seq_type}.{run_id}.{profile}.dorado.basecall_done",
+    params:
+        bc_args=BC_ARGS,
+    resources:
+        hrs=96,
+        mem=lambda wildcards, attempt: mem_dict[attempt],
+        cuda=lambda wildcards, attempt: f"-l cuda={attempt}",
+        gpu="TRUE",
+        testing="FALSE",
+    threads: 6
+    run:
+        info_dict = {}
+        info_dict["sample"] = wildcards.sample
+        info_dict["cell"] = wildcards.run_id
+        info_dict["profile"] = wildcards.profile
+        info_dict["cfg"] = config.get("profile")[wildcards.profile]["cfg"]
+        info_dict["modbase_cfg"] = config.get("profile")[wildcards.profile][
+            "modbase_cfg"
+        ]
+        info_dict["model"] = config.get("profile")[wildcards.profile]["model"]
+        info_dict["version"] = config.get("dorado_version")
+        info_dict["date"] = wildcards.run_id.split("_")[0]
+        info_dict["flowcell"] = wildcards.run_id.split("_")[3]
+        info_dict["slot"] = wildcards.run_id.split("_")[2]
+        info_dict["fast5_dir"] = config.get("fast5_dir").format(**wildcards)
+
+        temp_root = config.get("tmp_dir", "/tmp")
+
+        temp_dir_dorado = os.path.join(
+            temp_root,
+            getpass.getuser(),
+            "dorado_basecall",
+            info_dict["cell"],
+            info_dict["version"],
+            info_dict["model"],
+        )
+
+        # Run attributes
+        run_attrib_list = list()
+
+        for cell_entry_key in info_dict:
+            run_attrib_list.append(
+                pd.Series(
+                    ["RUNINFO", cell_entry_key, info_dict[cell_entry_key]],
+                    index=["TYPE", "ATTRIBUTE", "VALUE"],
+                )
+            )
+
+
+        fast5_dir = info_dict["fast5_dir"].format(**wildcards)
+        cfg = info_dict["cfg"]
+        modbase_cfg = info_dict["modbase_cfg"]
+        version = info_dict["version"]
+
+
+        # Basecall and collect results
+        os.makedirs(temp_dir_dorado, exist_ok=True)
+        # Run Guppy
+        shell(
+        """module load dorado/{version} cuda/11.6 ; """
+            """AVAIL_GPU=$CUDA_VISIBLE_DEVICES ; """
+            """module unload cuda/11.6 ; """
+            """CUDA_VISIBLE_DEVICES=${{AVAIL_GPU}} """
+            """dorado basecaller """
+            """--recursive """
+            """{params.bc_args} """
+            """--device cuda:all """
+            """--modified-bases-models ${{DORADO_MODEL_PATH}}/{modbase_cfg} """
+            """${{DORADO_MODEL_PATH}}/{cfg} """
+            """{fast5_dir} """
+            """ > {temp_dir_dorado}/calls.bam """
+        )
+
+
+        run_attrib_list.append(
+            pd.Series(
+                [
+                    "TIMESTAMP",
+                    "basecall_end",
+                    datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                ],
+                index=["TYPE", "ATTRIBUTE", "VALUE"],
+            )
+        )
+
+        # Make output directory (in results)
+        out_dir = BASECALL_DORADO_DIR_PATTERN.format(
+            **wildcards, version=info_dict["version"], model=info_dict["model"]
+        )
+
+        df_run = pd.concat(run_attrib_list, axis=1).T
+
+        run_info_out = os.path.join(
+            out_dir, BASECALL_DORADO_INFO_PATTERN.format(run_id=info_dict["cell"])
+        )
+
+        os.makedirs(os.path.dirname(run_info_out), exist_ok=True)
+
+        df_run.to_csv(run_info_out, sep="\t", index=False, compression="gzip")
+
+        # Write flag
+        with open(output.flag, "wt") as out_file:
+            out_file.write(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S\n"))
+
+
+rule zip_files:
+    input:
+        rules.basecall_dorado.output.flag,
+    output:
+        flag=touch(
+            ".basecall_meth/{sample}.{seq_type}.{run_id}.{profile}.dorado.zip_done"
+        ),
+    resources:
+        hrs=48,
+        mem=12,
+        cuda="",
+        gpu="FALSE",
+        testing="FALSE",
+    threads: 1
+    run:
+        info_dict = {}
+        info_dict["sample"] = wildcards.sample
+        info_dict["cell"] = wildcards.run_id
+        info_dict["profile"] = wildcards.profile
+        info_dict["cfg"] = config.get("profile")[wildcards.profile]["cfg"]
+        info_dict["modbase_cfg"] = config.get("profile")[wildcards.profile][
+            "modbase_cfg"
+        ]
+        info_dict["model"] = config.get("profile")[wildcards.profile]["model"]
+        info_dict["version"] = config.get("dorado_version")
+        info_dict["date"] = wildcards.run_id.split("_")[0]
+        info_dict["flowcell"] = wildcards.run_id.split("_")[3]
+        info_dict["slot"] = wildcards.run_id.split("_")[2]
+        info_dict["fast5_dir"] = config.get("fast5_dir").format(**wildcards)
+
+        temp_root = config.get("tmp_dir", "/tmp")
+
+        temp_dir_dorado = os.path.join(
+            temp_root,
+            getpass.getuser(),
+            "dorado_basecall",
+            info_dict["cell"],
+            info_dict["version"],
+            info_dict["model"],
+        )
+
+        # Make output directory (in results)
+        out_dir = BASECALL_DORADO_DIR_PATTERN.format(
+            **wildcards, version=info_dict["version"], model=info_dict["model"]
+        )
+
+        os.makedirs(out_dir, exist_ok=True)
+
+
+        print(f"Processing BAMs in subdirectory")
+
+        bam_out = os.path.join(
+            out_dir,
+            BASECALL_DORADO_BAM_PATTERN.format(
+                date=info_dict["date"],
+                run_id=info_dict["cell"],
+                seq_type=wildcards.seq_type,
+                sample=wildcards.sample,
+                inst=config.get("profile")[wildcards.profile]["instrument"],
+                slot=info_dict["slot"],
+                flowcell=info_dict["flowcell"],
+                version=info_dict["version"],
+                model=info_dict["model"],
+                fastq_set="pass",
+            ),
+        )
+
+        shell("rsync -av {temp_dir_dorado}/calls.bam {bam_out}")
+
+        version=info_dict["version"]
+        shell("module load dorado/{version}; dorado summary {bam_out} > {out_dir}/sequencing_summary.txt")
+
+        # Collect FASTQ files
+        print(f"Processing FASTQs in subdirectory")
+
+        fastq_out = os.path.join(
+            out_dir,
+            BASECALL_DORADO_FASTQ_PATTERN.format(
+                date=info_dict["date"],
+                run_id=info_dict["cell"],
+                seq_type=wildcards.seq_type,
+                sample=wildcards.sample,
+                inst=config.get("profile")[wildcards.profile]["instrument"],
+                slot=info_dict["slot"],
+                flowcell=info_dict["flowcell"],
+                version=info_dict["version"],
+                model=info_dict["model"],
+                fastq_set="pass",
+            ),
+        )
+
+
+        shell(
+        "module load samtools/1.12 htslib/1.16; samtools fastq {bam_out} | bgzip -c > {fastq_out}"
+        )
+ 
+        shell(
+        "samtools fqidx {fastq_out}; chmod 444 {fastq_out};"
+        )
+
+        # MD5
+        md5_out_file_name = os.path.join(
+            BASECALL_DORADO_MD5_PATTERN.format(run_id=info_dict["cell"])
+        )
+
+        shell(
+            """cd {out_dir}; """
+            """md5sum $(find . -type f | grep -Fv {md5_out_file_name}) > {md5_out_file_name}"""
+        )
+
+        if os.path.exists(temp_dir_dorado):
+            shutil.rmtree(temp_dir_dorado)
