@@ -33,6 +33,7 @@ CELL_DF = pd.read_csv(
 
 ### Includes ###
 
+shell.prefix("source ~/.bash_profile; ")
 
 wildcard_constraints:
     sample="|".join(CELL_DF.index.get_level_values("SAMPLE")),

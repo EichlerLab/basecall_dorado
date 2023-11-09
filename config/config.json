@@ -2,32 +2,41 @@
     "profile": {
         "prom1_sup_kit14": {
             "cfg": "dna_r10.4.1_e8.2_400bps_sup@v4.2.0",
-            "modbase_cfg": "dna_r10.4.1_e8.2_400bps_sup@v4.2.0_5mCG_5hmCG@v2",
             "instrument" : "eee-prom1",
             "model" : "sup-k14"
         },
-        "prom1_sup_kit14_m6a": {
-            "cfg": "dna_r10.4.1_e8.2_400bps_sup@v4.2.0",
-            "modbase_cfg": "dna_r10.4.1_e8.2_400bps_sup@v4.2.0_6mA@v2",
+        "prom1_sup": {
+            "cfg": "dna_r9.4.1_e8_sup@v3.3",
             "instrument" : "eee-prom1",
-            "model" : "sup-k14-m6a"
+            "model" : "sup-k14"
+        },
+        "grid3_sup": {
+            "cfg": "dna_r9.4.1_e8_sup@v3.3",
+            "instrument" : "eee-grid3",
+            "model" : "sup-k14"
         },
         "grid3_sup_kit14": {
-            "cfg": "dna_r10.4.1_e8.2_400bps_sup@v4.2.0_5mCG_5hmCG@v2",
-            "modbase_cfg": "dna_r10.4.1_e8.2_400bps_sup@v4.2.0_5mCG_5hmCG@v2",
+            "cfg": "dna_r10.4.1_e8.2_400bps_sup@v4.2.0",
             "instrument" : "eee-grid3",
             "model" : "sup-k14"
         },
         "ext-prom_sup_kit14": {
-            "cfg": "dna_r10.4.1_e8.2_400bps_sup@v4.2.0_5mCG_5hmCG@v2",
-            "modbase_cfg": "dna_r10.4.1_e8.2_400bps_sup@v4.2.0_5mCG_5hmCG@v2",
+            "cfg": "dna_r10.4.1_e8.2_400bps_sup@v4.2.0",
             "instrument" : "ext-prom1",
             "model" : "sup-k14"
         }
     },
-    "dorado_version": "0.3.2",
+    "mod_base_profile": {
+        "6mA" : ["prom1_sup_kit14", "grid3_sup_kit14", "ext-prom_sup_kit14"],
+        "5mC" : ["prom1_sup_kit14", "grid3_sup_kit14", "ext-prom_sup_kit14"],
+        "5mC_5hmC" : ["prom1_sup_kit14", "grid3_sup_kit14", "ext-prom_sup_kit14"],
+        "5mCG_5hmCG" : ["prom1_sup_kit14", "grid3_sup_kit14", "ext-prom_sup_kit14", "prom1_sup"],
+        "5mCG" : ["prom1_sup", "grid3_sup"]
+    },
+    "dorado_version": "0.4.2",
     "fast5_dir": "{sample}/raw_data/nanopore/{seq_type}/fast5/{run_id}",
     "default_profile": "prom1_sup_kit14",
+    "default_modification": "5mCG_5hmCG",
     "tmp_dir" : "/net/eichler/vol26/15000/nobackups"
 }
 
