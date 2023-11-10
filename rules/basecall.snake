@@ -44,12 +44,12 @@ rule basecall_dorado:
         info_dict = {}
         info_dict["sample"] = wildcards.sample
         info_dict["cell"] = wildcards.run_id
-        info_dict["profile"] = wildcards.profile.split("-")[1]
+        info_dict["profile"] = wildcards.profile.split("-")[0]
         info_dict["cfg"] = config.get("profile")[info_dict["profile"]]["cfg"]
         if "-" not in wildcards.profile:
             info_dict["modbase"] = "no_modbase"
         else:
-            info_dict["modbase"] = wildcards.profile.split("-")[1]
+            info_dict["modbase"] = wildcards.profile.split("-")[-1]
         info_dict["model"] = config.get("profile")[info_dict["profile"]]["model"]
         info_dict["version"] = config.get("dorado_version")
         info_dict["date"] = wildcards.run_id.split("_")[0]
@@ -98,9 +98,9 @@ rule basecall_dorado:
             """--recursive """
             """{params.bc_args} """
             """--device cuda:all """
-            """{modbase_cfg} """
             """${{DORADO_MODEL_PATH}}/{cfg} """
             """{fast5_dir} """
+            """{modbase_cfg} """
             """ > {temp_dir_dorado}/calls.bam """
         )
 
@@ -155,7 +155,7 @@ rule zip_files:
         info_dict = {}
         info_dict["sample"] = wildcards.sample
         info_dict["cell"] = wildcards.run_id
-        info_dict["profile"] = wildcards.profile.split("-")[1]
+        info_dict["profile"] = wildcards.profile.split("-")[0]
         info_dict["cfg"] = config.get("profile")[info_dict["profile"]]["cfg"]
         if "-" not in wildcards.profile:
             info_dict["modbase"] = "no_modbase"
