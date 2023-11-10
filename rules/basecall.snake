@@ -38,6 +38,7 @@ rule basecall_dorado:
         cuda=lambda wildcards, attempt: f"-l cuda={attempt}",
         gpu="TRUE",
         testing="FALSE",
+        load=100,
     threads: 6
     run:
         info_dict = {}
@@ -148,6 +149,7 @@ rule zip_files:
         cuda="",
         gpu="FALSE",
         testing="FALSE",
+        load=50,
     threads: 1
     run:
         info_dict = {}
