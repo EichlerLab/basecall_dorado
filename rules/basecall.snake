@@ -92,10 +92,7 @@ rule basecall_dorado:
         os.makedirs(temp_dir_dorado, exist_ok=True)
         # Run Guppy
         shell(
-        """module load dorado/{version} cuda/11.6 ; """
-            """AVAIL_GPU=$CUDA_VISIBLE_DEVICES ; """
-            """module unload cuda/11.6 ; """
-            """CUDA_VISIBLE_DEVICES=${{AVAIL_GPU}} """
+        """module load dorado/{version}; """
             """dorado basecaller """
             """--recursive """
             """{params.bc_args} """
