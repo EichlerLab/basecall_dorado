@@ -39,7 +39,7 @@ wildcard_constraints:
     sample="|".join(CELL_DF.index.get_level_values("SAMPLE")),
     seq_type="|".join(CELL_DF.index.get_level_values("SEQ_TYPE")),
     run_id="|".join(CELL_DF.index.get_level_values("RUN_ID")),
-    profile="|".join(config["profile"]),
+    profile="|".join([f"{x}-{y}" for y in config['mod_base_profile'] for x in config['mod_base_profile'][y]]+config['profile'].keys()),
 
 
 include: "rules/basecall.snake"

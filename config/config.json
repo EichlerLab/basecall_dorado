@@ -30,13 +30,13 @@
         "6mA" : ["prom1_sup_kit14", "grid3_sup_kit14", "ext-prom_sup_kit14"],
         "5mC" : ["prom1_sup_kit14", "grid3_sup_kit14", "ext-prom_sup_kit14"],
         "5mC_5hmC" : ["prom1_sup_kit14", "grid3_sup_kit14", "ext-prom_sup_kit14"],
-        "5mCG_5hmCG" : ["prom1_sup_kit14", "grid3_sup_kit14", "ext-prom_sup_kit14", "prom1_sup"],
+        "5mCG_5hmCG" : ["prom1_sup_kit14", "grid3_sup_kit14", "ext-prom_sup_kit14", "prom1_sup", "grid3_sup"],
         "5mCG" : ["prom1_sup", "grid3_sup"]
     },
     "dorado_version": "0.4.2",
     "fast5_dir": "{sample}/raw_data/nanopore/{seq_type}/fast5/{run_id}",
     "default_profile": "prom1_sup_kit14",
-    "default_modification": "5mCG_5hmCG",
+    "base_modification": "5mCG_5hmCG",
     "tmp_dir" : "/net/eichler/vol26/15000/nobackups"
 }
 

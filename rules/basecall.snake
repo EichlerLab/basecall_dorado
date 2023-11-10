@@ -45,9 +45,10 @@ rule basecall_dorado:
         info_dict["cell"] = wildcards.run_id
         info_dict["profile"] = wildcards.profile
         info_dict["cfg"] = config.get("profile")[wildcards.profile]["cfg"]
-        info_dict["modbase_cfg"] = config.get("profile")[wildcards.profile][
-            "modbase_cfg"
-        ]
+        if "-" not in wildcards.profile:
+            info_dict["modbase"] = "no_modbase"
+        else:
+            info_dict["modbase"] = wildcards.profile.split("-")[1]
         info_dict["model"] = config.get("profile")[wildcards.profile]["model"]
         info_dict["version"] = config.get("dorado_version")
         info_dict["date"] = wildcards.run_id.split("_")[0]
@@ -63,7 +64,7 @@ rule basecall_dorado:
             "dorado_basecall",
             info_dict["cell"],
             info_dict["version"],
-            info_dict["model"],
+            info_dict["profile"],
         )
 
         # Run attributes
@@ -80,7 +81,10 @@ rule basecall_dorado:
 
         fast5_dir = info_dict["fast5_dir"].format(**wildcards)
         cfg = info_dict["cfg"]
-        modbase_cfg = info_dict["modbase_cfg"]
+        if info_dict["modbase"] != "no_modbase":
+            modbase_cfg = "--modified-bases "+info_dict["modbase"]
+        else:
+            modbase_cfg = ""
         version = info_dict["version"]
 
 
@@ -96,7 +100,7 @@ rule basecall_dorado:
             """--recursive """
             """{params.bc_args} """
             """--device cuda:all """
-            """--modified-bases-models ${{DORADO_MODEL_PATH}}/{modbase_cfg} """
+            """{modbase_cfg} """
             """${{DORADO_MODEL_PATH}}/{cfg} """
             """{fast5_dir} """
             """ > {temp_dir_dorado}/calls.bam """
