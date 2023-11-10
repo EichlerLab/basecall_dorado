@@ -44,13 +44,13 @@ rule basecall_dorado:
         info_dict = {}
         info_dict["sample"] = wildcards.sample
         info_dict["cell"] = wildcards.run_id
-        info_dict["profile"] = wildcards.profile
-        info_dict["cfg"] = config.get("profile")[wildcards.profile.split("-")[0]]["cfg"]
+        info_dict["profile"] = wildcards.profile.split("-")[1]
+        info_dict["cfg"] = config.get("profile")[info_dict["profile"]]["cfg"]
         if "-" not in wildcards.profile:
             info_dict["modbase"] = "no_modbase"
         else:
             info_dict["modbase"] = wildcards.profile.split("-")[1]
-        info_dict["model"] = config.get("profile")[wildcards.profile]["model"]
+        info_dict["model"] = config.get("profile")[info_dict["profile"]]["model"]
         info_dict["version"] = config.get("dorado_version")
         info_dict["date"] = wildcards.run_id.split("_")[0]
         info_dict["flowcell"] = wildcards.run_id.split("_")[3]
@@ -65,7 +65,7 @@ rule basecall_dorado:
             "dorado_basecall",
             info_dict["cell"],
             info_dict["version"],
-            info_dict["profile"],
+            wildcards.profile,
         )
 
         # Run attributes
@@ -155,12 +155,13 @@ rule zip_files:
         info_dict = {}
         info_dict["sample"] = wildcards.sample
         info_dict["cell"] = wildcards.run_id
-        info_dict["profile"] = wildcards.profile
-        info_dict["cfg"] = config.get("profile")[wildcards.profile]["cfg"]
-        info_dict["modbase_cfg"] = config.get("profile")[wildcards.profile][
-            "modbase_cfg"
-        ]
-        info_dict["model"] = config.get("profile")[wildcards.profile]["model"]
+        info_dict["profile"] = wildcards.profile.split("-")[1]
+        info_dict["cfg"] = config.get("profile")[info_dict["profile"]]["cfg"]
+        if "-" not in wildcards.profile:
+            info_dict["modbase"] = "no_modbase"
+        else:
+            info_dict["modbase"] = wildcards.profile.split("-")[1]
+        info_dict["model"] = config.get("profile")[info_dict["profile"]]["model"]
         info_dict["version"] = config.get("dorado_version")
         info_dict["date"] = wildcards.run_id.split("_")[0]
         info_dict["flowcell"] = wildcards.run_id.split("_")[3]
@@ -175,7 +176,7 @@ rule zip_files:
             "dorado_basecall",
             info_dict["cell"],
             info_dict["version"],
-            info_dict["model"],
+            wildcards.profile,
         )
 
         # Make output directory (in results)
