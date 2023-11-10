@@ -45,7 +45,7 @@ rule basecall_dorado:
         info_dict["sample"] = wildcards.sample
         info_dict["cell"] = wildcards.run_id
         info_dict["profile"] = wildcards.profile
-        info_dict["cfg"] = config.get("profile")[wildcards.profile]["cfg"]
+        info_dict["cfg"] = config.get("profile")[wildcards.profile.split("-")[0]]["cfg"]
         if "-" not in wildcards.profile:
             info_dict["modbase"] = "no_modbase"
         else:
