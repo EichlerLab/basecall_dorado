@@ -38,7 +38,6 @@ rule basecall_dorado:
         cuda=lambda wildcards, attempt: f"-l cuda={attempt}",
         gpu="TRUE",
         testing="FALSE",
-        load=100,
     threads: 6
     run:
         info_dict = {}
@@ -93,7 +92,10 @@ rule basecall_dorado:
         os.makedirs(temp_dir_dorado, exist_ok=True)
         # Run Guppy
         shell(
-        """module load dorado/{version}; """
+        """module load dorado/{version} cuda/11.6 ; """
+            """AVAIL_GPU=$CUDA_VISIBLE_DEVICES ; """
+            """module unload cuda/11.6 ; """
+            """CUDA_VISIBLE_DEVICES=${{AVAIL_GPU}} """
             """dorado basecaller """
             """--recursive """
             """{params.bc_args} """
@@ -149,7 +151,6 @@ rule zip_files:
         cuda="",
         gpu="FALSE",
         testing="FALSE",
-        load=50,
     threads: 1
     run:
         info_dict = {}
@@ -196,7 +197,7 @@ rule zip_files:
                 run_id=info_dict["cell"],
                 seq_type=wildcards.seq_type,
                 sample=wildcards.sample,
-                inst=config.get("profile")[wildcards.profile]["instrument"],
+                inst=config.get("profile")[info_dict["profile"]]["instrument"],
                 slot=info_dict["slot"],
                 flowcell=info_dict["flowcell"],
                 version=info_dict["version"],
