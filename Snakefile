@@ -35,7 +35,6 @@ CELL_DF = pd.read_csv(
 
 shell.prefix("source ~/.bash_profile; ")
 
-
 wildcard_constraints:
     sample="|".join(CELL_DF.index.get_level_values("SAMPLE")),
     seq_type="|".join(CELL_DF.index.get_level_values("SEQ_TYPE")),
