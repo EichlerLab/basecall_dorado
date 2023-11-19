@@ -38,6 +38,7 @@ rule basecall_dorado:
         cuda=lambda wildcards, attempt: f"-l cuda={attempt}",
         gpu="TRUE",
         testing="FALSE",
+        load=100,
     threads: 6
     run:
         info_dict = {}
@@ -92,10 +93,7 @@ rule basecall_dorado:
         os.makedirs(temp_dir_dorado, exist_ok=True)
         # Run Guppy
         shell(
-        """module load dorado/{version} cuda/11.6 ; """
-            """AVAIL_GPU=$CUDA_VISIBLE_DEVICES ; """
-            """module unload cuda/11.6 ; """
-            """CUDA_VISIBLE_DEVICES=${{AVAIL_GPU}} """
+        """module load dorado/{version}; """
             """dorado basecaller """
             """--recursive """
             """{params.bc_args} """
@@ -151,12 +149,13 @@ rule zip_files:
         cuda="",
         gpu="FALSE",
         testing="FALSE",
+        load=50,
     threads: 1
     run:
         info_dict = {}
         info_dict["sample"] = wildcards.sample
         info_dict["cell"] = wildcards.run_id
-        info_dict["profile"] = wildcards.profile.split("-")[1]
+        info_dict["profile"] = wildcards.profile.split("-")[0]
         info_dict["cfg"] = config.get("profile")[info_dict["profile"]]["cfg"]
         if "-" not in wildcards.profile:
             info_dict["modbase"] = "no_modbase"
