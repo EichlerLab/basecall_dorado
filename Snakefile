@@ -35,23 +35,20 @@ CELL_DF = pd.read_csv(
 
 shell.prefix("source ~/.bash_profile; ")
 
-
 wildcard_constraints:
     sample="|".join(CELL_DF.index.get_level_values("SAMPLE")),
     seq_type="|".join(CELL_DF.index.get_level_values("SEQ_TYPE")),
     run_id="|".join(CELL_DF.index.get_level_values("RUN_ID")),
-    profile="|".join(
-        [
-            f"{x}-{y}"
-            for y in config["mod_base_profile"]
-            for x in config["mod_base_profile"][y]
-        ]
-        + list(config["profile"].keys())
-    ),
-
+    profile="|".join(list(config["profile"].keys())),
+    modbase="|".join(list(config["mod_base_profile"].keys()))
 
 include: "rules/basecall.snake"
 
 
 localrules:
     basecall_all,
+
+
+rule basecall_all:
+    input:
+        _gather_dorado_files,

@@ -1,37 +1,58 @@
+
 BASECALL_DORADO_DIR_PATTERN = "{sample}/raw_data/nanopore/{seq_type}/fastq/{run_id}/dorado/{version}/{model}/"
-BASECALL_DORADO_FASTQ_PATTERN = "{date}_{sample}_{seq_type}_{inst}-{slot}-{flowcell}_dorado-{version}-{model}_fastq_{fastq_set}.fastq.gz"
-BASECALL_DORADO_BAM_PATTERN = "{date}_{sample}_{seq_type}_{inst}-{slot}-{flowcell}_dorado-{version}-{model}_fastq_{fastq_set}.bam"
+BASECALL_DORADO_FASTQ_PATTERN = "{date}_{sample}_{seq_type}_{inst}-{run_id}_dorado-{version}-{model}-{modbase}_{fastq_set}.fastq.gz"
+BASECALL_DORADO_BAM_PATTERN = "{date}_{sample}_{seq_type}_{inst}-{run_id}_dorado-{version}-{model}-{modbase}_{fastq_set}.bam"
 
 BC_ARGS = config.get("bc_args", "")
+
+BASE_MODIFICATION = config.get("base_modification", "5mCG_5hmCG")
 
 BASECALL_DORADO_META_PATTERN = "{run_id}_dorado_metadata.tar.gz"
 BASECALL_DORADO_INFO_PATTERN = "{run_id}_info.tsv.gz"
 BASECALL_DORADO_MD5_PATTERN = "{run_id}.md5"
 
-mem_dict = {1: "12", 2 : "60"}
+mem_dict = {1: "4", 2 : "60"}
 
+supported_set = set([
+        (profile, modbase)
+        for modbase in config["mod_base_profile"]
+        for profile in config["mod_base_profile"][modbase]
+    ])
+
+VERSION = str(config.get("dorado_version"))
+VERSION_DASH = VERSION.replace(".","-")
 
 def _gather_dorado_files(wildcards):
+    not_supported_runs = [
+        ("{sample}.{seq_type}.{run_id}".format(
+            sample=index[0], seq_type=index[1], run_id=index[2],
+            ), index[3]
+        )
+        for index in CELL_DF.index
+        if not ((index[3], BASE_MODIFICATION) in supported_set)
+    ]
+
+    if len(not_supported_runs) > 1:
+        print ("### Not allowed combination between profile and base modification found.")    
+        for not_supported_run, profile in not_supported_runs:
+            print (f"{not_supported_run}: {profile} is not supported by {BASE_MODIFICATION} modification.")
+        return []
+
     return [
-        ".basecall_meth/{sample}.{seq_type}.{run_id}.{profile}.dorado.zip_done".format(
-            sample=index[0], seq_type=index[1], run_id=index[2], profile=index[3]
+        ".basecall_meth/{sample}.{seq_type}.{run_id}.{profile}-{modbase}.dorado-{version_dash}.zip_done".format(
+            sample=index[0], seq_type=index[1], run_id=index[2], profile=index[3], modbase=BASE_MODIFICATION, version_dash=VERSION_DASH
         )
         for index in CELL_DF.index
     ]
-
-
-rule basecall_all:
-    input:
-        _gather_dorado_files,
-
 
 rule basecall_dorado:
     input:
         copy_record="{sample}/raw_data/nanopore/{seq_type}/copy_record/fast5/{run_id}.tab.gz",
     output:
-        flag=".basecall_meth/{sample}.{seq_type}.{run_id}.{profile}.dorado.basecall_done",
+        flag=".basecall_meth/{sample}.{seq_type}.{run_id}.{profile}-{modbase}.dorado-{version_dash}.basecall_done",
     params:
         bc_args=BC_ARGS,
+        version_dash=VERSION_DASH,
     resources:
         hrs=96,
         mem=lambda wildcards, attempt: mem_dict[attempt],
@@ -46,11 +67,8 @@ rule basecall_dorado:
         info_dict["cell"] = wildcards.run_id
         info_dict["profile"] = wildcards.profile.split("-")[0]
         info_dict["cfg"] = config.get("profile")[info_dict["profile"]]["cfg"]
-        if "-" not in wildcards.profile:
-            info_dict["modbase"] = "no_modbase"
-        else:
-            info_dict["modbase"] = wildcards.profile.split("-")[1]
         info_dict["model"] = config.get("profile")[info_dict["profile"]]["model"]
+        info_dict["modbase"] = wildcards.modbase
         info_dict["version"] = config.get("dorado_version")
         info_dict["date"] = wildcards.run_id.split("_")[0]
         info_dict["flowcell"] = wildcards.run_id.split("_")[3]
@@ -66,6 +84,7 @@ rule basecall_dorado:
             info_dict["cell"],
             info_dict["version"],
             wildcards.profile,
+            wildcards.modbase,
         )
 
         # Run attributes
@@ -82,18 +101,17 @@ rule basecall_dorado:
 
         fast5_dir = info_dict["fast5_dir"].format(**wildcards)
         cfg = info_dict["cfg"]
-        if info_dict["modbase"] != "no_modbase":
-            modbase_cfg = "--modified-bases "+info_dict["modbase"]
-        else:
-            modbase_cfg = ""
+        modbase_cfg = f"--modified-bases {wildcards.modbase}"
         version = info_dict["version"]
 
 
         # Basecall and collect results
         os.makedirs(temp_dir_dorado, exist_ok=True)
-        # Run Guppy
+        # Run Dorado
         shell(
         """module load dorado/{version}; """
+        """echo GPU ${{CUDA_VISIBLE_DEVICES}}; """
+        """nvidia-smi; """
             """dorado basecaller """
             """--recursive """
             """{params.bc_args} """
@@ -116,7 +134,7 @@ rule basecall_dorado:
             )
         )
 
-        # Make output directory (in results)
+#        Make output directory (in results)
         out_dir = BASECALL_DORADO_DIR_PATTERN.format(
             **wildcards, version=info_dict["version"], model=info_dict["model"]
         )
@@ -141,7 +159,7 @@ rule zip_files:
         rules.basecall_dorado.output.flag,
     output:
         flag=touch(
-            ".basecall_meth/{sample}.{seq_type}.{run_id}.{profile}.dorado.zip_done"
+            ".basecall_meth/{sample}.{seq_type}.{run_id}.{profile}-{modbase}.dorado-{version_dash}.zip_done"
         ),
     resources:
         hrs=48,
@@ -150,6 +168,8 @@ rule zip_files:
         gpu="FALSE",
         testing="FALSE",
         load=50,
+    params:
+        version_dash=VERSION_DASH,
     threads: 1
     run:
         info_dict = {}
@@ -157,11 +177,8 @@ rule zip_files:
         info_dict["cell"] = wildcards.run_id
         info_dict["profile"] = wildcards.profile.split("-")[0]
         info_dict["cfg"] = config.get("profile")[info_dict["profile"]]["cfg"]
-        if "-" not in wildcards.profile:
-            info_dict["modbase"] = "no_modbase"
-        else:
-            info_dict["modbase"] = wildcards.profile.split("-")[1]
         info_dict["model"] = config.get("profile")[info_dict["profile"]]["model"]
+        info_dict["modbase"] = wildcards.modbase
         info_dict["version"] = config.get("dorado_version")
         info_dict["date"] = wildcards.run_id.split("_")[0]
         info_dict["flowcell"] = wildcards.run_id.split("_")[3]
@@ -177,12 +194,14 @@ rule zip_files:
             info_dict["cell"],
             info_dict["version"],
             wildcards.profile,
+            wildcards.modbase,
         )
 
-        # Make output directory (in results)
+#        Make output directory (in results)
         out_dir = BASECALL_DORADO_DIR_PATTERN.format(
             **wildcards, version=info_dict["version"], model=info_dict["model"]
         )
+
 
         os.makedirs(out_dir, exist_ok=True)
 
@@ -201,6 +220,7 @@ rule zip_files:
                 flowcell=info_dict["flowcell"],
                 version=info_dict["version"],
                 model=info_dict["model"],
+                modbase=wildcards.modbase,
                 fastq_set="pass",
             ),
         )
@@ -225,17 +245,18 @@ rule zip_files:
                 flowcell=info_dict["flowcell"],
                 version=info_dict["version"],
                 model=info_dict["model"],
+                modbase=wildcards.modbase,
                 fastq_set="pass",
             ),
         )
 
 
         shell(
-        "module load samtools/1.12 htslib/1.16; samtools fastq {bam_out} | bgzip -c > {fastq_out}"
+        "module load samtools/1.12 htslib/1.19; samtools fastq {bam_out} | bgzip -c > {fastq_out}"
         )
  
         shell(
-        "samtools fqidx {fastq_out}; chmod 444 {fastq_out};"
+        "samtools fqidx {fastq_out}; chmod 644 {fastq_out};"
         )
 
         # MD5
