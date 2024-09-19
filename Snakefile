@@ -41,7 +41,7 @@ wildcard_constraints:
     run_id="|".join(CELL_DF.index.get_level_values("RUN_ID")),
     profile="|".join(list(config["profile"].keys())),
     modbase="|".join(list(config["mod_base_profile"].keys())),
-    version_dash="|".join(["0-7-2","0-7-3"])
+    version_dash="|".join(["0-7-2","0-7-3","0-8-0"])
 
 include: "rules/basecall.snake"
 
