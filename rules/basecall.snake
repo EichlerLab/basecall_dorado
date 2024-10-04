@@ -2,8 +2,10 @@
 import numpy as np
 
 BASECALL_DORADO_DIR_PATTERN = "{sample}/raw_data/nanopore/{seq_type}/fastq/{run_id}/dorado/{version}/{model}/"
-BASECALL_DORADO_FASTQ_PATTERN = "{date}_{sample}_{seq_type}_{inst}-{run_id}_dorado-{version}-{model}-{modbase}_{fastq_set}.fastq.gz"
-BASECALL_DORADO_BAM_PATTERN = "{date}_{sample}_{seq_type}_{inst}-{run_id}_dorado-{version}-{model}-{modbase}_{fastq_set}.bam"
+#BASECALL_DORADO_FASTQ_PATTERN = "{date}_{sample}_{seq_type}_{inst}-{run_id}_dorado-{version}-{model}-{modbase}_{fastq_set}.fastq.gz"
+#BASECALL_DORADO_BAM_PATTERN = "{date}_{sample}_{seq_type}_{inst}-{run_id}_dorado-{version}-{model}-{modbase}_{fastq_set}.bam"
+BASECALL_DORADO_FASTQ_PATTERN = "{date}_{sample}_{seq_type}_{inst}-{run_id}_dorado-{version}-{cfg}-{modbase}_{fastq_set}.fastq.gz"
+BASECALL_DORADO_BAM_PATTERN = "{date}_{sample}_{seq_type}_{inst}-{run_id}_dorado-{version}-{cfg}-{modbase}_{fastq_set}.bam"
 
 BC_ARGS = config.get("bc_args", "")
 
@@ -217,17 +219,17 @@ rule zip_files:
         bam_out = os.path.join(
             out_dir,
             BASECALL_DORADO_BAM_PATTERN.format(
-                date=info_dict["date"],
-                run_id=info_dict["cell"],
-                seq_type=wildcards.seq_type,
-                sample=wildcards.sample,
-                inst=config.get("profile")[info_dict["profile"]]["instrument"],
-                slot=info_dict["slot"],
-                flowcell=info_dict["flowcell"],
-                version=info_dict["version"],
-                model=info_dict["model"],
-                modbase=wildcards.modbase,
-                fastq_set="pass",
+                date = info_dict["date"],
+                run_id = info_dict["cell"],
+                seq_type = wildcards.seq_type,
+                sample = wildcards.sample,
+                inst = config.get("profile")[info_dict["profile"]]["instrument"],
+                slot = info_dict["slot"],
+                flowcell = info_dict["flowcell"],
+                version = info_dict["version"],
+                cfg = info_dict["cfg"].replace("@","_"),
+                modbase = wildcards.modbase,
+                fastq_set = "pass",
             ),
         )
 
@@ -241,17 +243,17 @@ rule zip_files:
         fastq_out = os.path.join(
             out_dir,
             BASECALL_DORADO_FASTQ_PATTERN.format(
-                date=info_dict["date"],
-                run_id=info_dict["cell"],
-                seq_type=wildcards.seq_type,
-                sample=wildcards.sample,
-                inst=config.get("profile")[info_dict["profile"]]["instrument"],
-                slot=info_dict["slot"],
-                flowcell=info_dict["flowcell"],
-                version=info_dict["version"],
-                model=info_dict["model"],
-                modbase=wildcards.modbase,
-                fastq_set="pass",
+                date = info_dict["date"],
+                run_id = info_dict["cell"],
+                seq_type = wildcards.seq_type,
+                sample = wildcards.sample,
+                inst = config.get("profile")[info_dict["profile"]]["instrument"],
+                slot = info_dict["slot"],
+                flowcell = info_dict["flowcell"],
+                version = info_dict["version"],
+                cfg = info_dict["cfg"].replace("@","_"),
+                modbase = wildcards.modbase,
+                fastq_set = "pass",
             ),
         )
 
