@@ -15,7 +15,7 @@ BASECALL_DORADO_META_PATTERN = "{run_id}_dorado_metadata.tar.gz"
 BASECALL_DORADO_INFO_PATTERN = "{run_id}_info.tsv.gz"
 BASECALL_DORADO_MD5_PATTERN = "{run_id}.md5"
 
-mem_dict = {1: "4", 2 : "15"}
+mem_dict = {1: "4", 2 : "15", 3: "60"}
 
 supported_set = set([
         (profile, modbase)
