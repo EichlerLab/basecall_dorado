@@ -19,7 +19,7 @@
         "6mA" : ["prom1_sup_kit14"]
     },
     "fast5_dir": "{sample}/raw_data/nanopore/{seq_type}/fast5/{run_id}/pod5",
-    "dorado_default_version": "0.7.3",
+    "dorado_default_version": "0.9.5",
     "default_profile": "prom1_sup_kit14",
     "base_modification": "5mCG_5hmCG",
     "tmp_dir" : "/net/eichler/vol28/projects/scratch/nobackups/"
