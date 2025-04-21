@@ -26,7 +26,6 @@ supported_set = set([
 VERSION = str(config.get("dorado_default_version"))
 VERSION_DASH = VERSION.replace(".","-")
 
-
 def _gather_dorado_files(wildcards):
     if not VERSION == "None":
         print (f"## Dorado version {VERSION} is set as default.")
@@ -52,6 +51,11 @@ def _gather_dorado_files(wildcards):
         for index in CELL_DF.index
     ]
 
+def get_bc_args(wildcards):
+    try:
+        return config.get("profile")[wildcards.profile.split("-")[0]]["bc_args"]
+    except:
+        return ""
 
 rule basecall_dorado:
     input:
@@ -59,7 +63,7 @@ rule basecall_dorado:
     output:
         flag=".basecall_meth/{sample}.{seq_type}.{run_id}.{profile}-{modbase}.dorado-{version_dash}.basecall_done",
     params:
-        bc_args=BC_ARGS,
+        bc_args=get_bc_args,
     resources:
         hrs=96,
         mem=lambda wildcards, attempt: mem_dict[attempt],
@@ -110,7 +114,11 @@ rule basecall_dorado:
 
         fast5_dir = info_dict["fast5_dir"].format(**wildcards)
         cfg = info_dict["cfg"]
-        modbase_cfg = f"--modified-bases {wildcards.modbase}"
+        if wildcards.modbase == "no_modbase":
+            modbase_cfg = ""
+        else:
+            modbase_cfg = f"--modified-bases {wildcards.modbase}"
+        
 
         # Basecall and collect results
         os.makedirs(temp_dir_dorado, exist_ok=True)
