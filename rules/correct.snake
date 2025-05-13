@@ -1,3 +1,0 @@
-import pandas as pd
-
-BASECALL_DORADO_FASTQ_PATTERN = "{date}_{sample}_{seq_type}_{inst}-{run_id}_dorado-{version}-{model}-{modbase}_{fastq_set}.fastq.gz"

@@ -286,3 +286,121 @@ rule zip_files:
 
         if os.path.exists(temp_dir_dorado):
             shutil.rmtree(temp_dir_dorado)
+
+rule zip_files_tag:
+    input:
+        rules.basecall_dorado.output.flag,
+    output:
+        flag=touch(
+            ".basecall_meth/{sample}.{seq_type}.{run_id}.{profile}-{modbase}.dorado-{version_dash}.tag.zip_done"
+        ),
+    resources:
+        hrs=48,
+        mem=12,
+        cuda="",
+        gpu="FALSE",
+        testing="FALSE",
+        load=50,
+    threads: 1
+    run:
+
+        version = wildcards.version_dash.replace("-",".")
+
+        info_dict = {}
+        info_dict["sample"] = wildcards.sample
+        info_dict["cell"] = wildcards.run_id
+        info_dict["profile"] = wildcards.profile.split("-")[0]
+        info_dict["cfg"] = config.get("profile")[info_dict["profile"]]["cfg"]
+        info_dict["model"] = config.get("profile")[info_dict["profile"]]["model"]
+        info_dict["modbase"] = wildcards.modbase
+        info_dict["version"] = version
+        info_dict["date"] = wildcards.run_id.split("_")[0]
+        info_dict["flowcell"] = wildcards.run_id.split("_")[3]
+        info_dict["slot"] = wildcards.run_id.split("_")[2]
+        info_dict["fast5_dir"] = config.get("fast5_dir").format(**wildcards)
+
+        temp_root = config.get("tmp_dir", "/tmp")
+
+        temp_dir_dorado = os.path.join(
+            temp_root,
+            getpass.getuser(),
+            "dorado_basecall",
+            info_dict["cell"],
+            info_dict["version"],
+            wildcards.profile,
+            wildcards.modbase,
+        )
+
+#        Make output directory (in results)
+        out_dir = BASECALL_DORADO_DIR_PATTERN.format(
+            **wildcards, version=info_dict["version"], model=info_dict["model"]
+        )
+
+
+        os.makedirs(out_dir, exist_ok=True)
+
+
+        print(f"Processing BAMs in subdirectory")
+
+        bam_out = os.path.join(
+            out_dir,
+            BASECALL_DORADO_BAM_PATTERN.format(
+                date = info_dict["date"],
+                run_id = info_dict["cell"],
+                seq_type = wildcards.seq_type,
+                sample = wildcards.sample,
+                inst = config.get("profile")[info_dict["profile"]]["instrument"],
+                slot = info_dict["slot"],
+                flowcell = info_dict["flowcell"],
+                version = info_dict["version"],
+                cfg = info_dict["cfg"].replace("@","_"),
+                modbase = wildcards.modbase,
+                fastq_set = "pass",
+            ),
+        )
+
+        shell("rsync -av {temp_dir_dorado}/calls.bam {bam_out}")
+
+        shell("module load dorado/{version}; dorado summary {bam_out} > {out_dir}/sequencing_summary.txt")
+
+        # Collect FASTQ files
+        print(f"Processing FASTQs in subdirectory")
+
+        fastq_out = os.path.join(
+            out_dir,
+            BASECALL_DORADO_FASTQ_PATTERN.format(
+                date = info_dict["date"],
+                run_id = info_dict["cell"],
+                seq_type = wildcards.seq_type,
+                sample = wildcards.sample,
+                inst = config.get("profile")[info_dict["profile"]]["instrument"],
+                slot = info_dict["slot"],
+                flowcell = info_dict["flowcell"],
+                version = info_dict["version"],
+                cfg = info_dict["cfg"].replace("@","_"),
+                modbase = wildcards.modbase,
+                fastq_set = "pass_tag",
+            ),
+        )
+
+
+        shell(
+        "module load samtools/1.12 htslib/1.16; samtools fastq -T MM,ML {bam_out} | bgzip -c > {fastq_out}"
+        )
+ 
+        shell(
+        "samtools fqidx {fastq_out}; chmod 644 {fastq_out};"
+        )
+
+        # MD5
+        md5_out_file_name = os.path.join(
+            BASECALL_DORADO_MD5_PATTERN.format(run_id=info_dict["cell"])
+        )
+
+        shell(
+            """cd {out_dir}; """
+            """md5sum $(find . -type f | grep -Fv {md5_out_file_name}) > {md5_out_file_name}"""
+        )
+
+        if os.path.exists(temp_dir_dorado):
+            shutil.rmtree(temp_dir_dorado)

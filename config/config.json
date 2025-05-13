@@ -17,13 +17,19 @@
     	    "instrument" : "eee-prom1",
             "model" : "r10_apk_sup_v5",
             "bc_args" : "--min-qscore 10"
-	}
+	    },
+        "grid3_sup": {
+            "cfg": "dna_r9.4.1_e8_sup@v3.3",
+            "instrument" : "eee-grid3",
+            "model" : "r9_sup_v3",
+            "bc_args" : ""
+        }
     },
     "mod_base_profile": {
         "4mC_5mC" : ["prom1_sup_kit14"],
         "5mC_5hmC" : ["prom1_sup_kit14"],
-        "5mCG_5hmCG" : ["prom1_sup_kit14", "prom1_sup"],
-        "5mCG" : ["prom1_sup"],
+        "5mCG_5hmCG" : ["prom1_sup_kit14", "prom1_sup", "grid3_sup"],
+        "5mCG" : ["prom1_sup", "grid3_sup"],
         "6mA" : ["prom1_sup_kit14"],
         "no_modbase": ["prom1_apk_sup_kit14"]
     },
