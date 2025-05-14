@@ -57,41 +57,6 @@ def get_bc_args(wildcards):
     except:
         return ""
 
-def decide_inputs(wildcards):
-    DORARO_BASECALL_FLAG_PATTERN = ".basecall_meth/{sample}.{seq_type}.{run_id}.{profile}-{modbase}.dorado-{version_dash}.basecall_done"
-
-    version = wildcards.version_dash.replace("-",".")
-    temp_root = config.get("tmp_dir", "/tmp")
-    
-    temp_dir_dorado = os.path.join(
-        temp_root,
-        getpass.getuser(),
-        "dorado_basecall",
-        wildcards.run_id,
-        version,
-        wildcards.profile,
-        wildcards.modbase,
-    )
-
-    bam_out = os.path.join(
-        out_dir,
-        BASECALL_DORADO_BAM_PATTERN.format(
-            **wildcards,
-            date = wildcards.run_id.split("_")[0],
-            inst = config.get("profile")[info_dict["profile"]]["instrument"],
-            slot = wildcards.run_id.split("_")[2],
-            flowcell = wildcards.run_id.split("_")[3],
-            version = version,
-            cfg = config.get("profile")[info_dict["profile"]]["cfg"].replace("@","_"),
-            fastq_set = "pass",
-        ),
-    )
-
-    if (not os.path.isfile(bam_out)) and (os.path.isfile(f"{temp_dir_dorado}/calls.bam}")): # initial basecalling
-        return DORARO_BASECALL_FLAG_PATTERN.formet(**wildcards)
-    else:
-        return bam_out
-
 rule basecall_dorado:
     input:
         copy_record="{sample}/raw_data/nanopore/{seq_type}/copy_record/fast5/{run_id}.tab.gz"
@@ -207,7 +172,7 @@ rule basecall_dorado:
 
 rule zip_files:
     input:
-        decide_inputs
+        rules.basecall_dorado.output.flag,
     output:
         flag=touch(
             ".basecall_meth/{sample}.{seq_type}.{run_id}.{profile}-{modbase}.dorado-{version_dash}.zip_done"
@@ -255,11 +220,7 @@ rule zip_files:
             **wildcards, version=info_dict["version"], model=info_dict["model"]
         )
 
-
         os.makedirs(out_dir, exist_ok=True)
-
-
-        print(f"Processing BAMs in subdirectory")
 
         bam_out = os.path.join(
             out_dir,
@@ -278,9 +239,10 @@ rule zip_files:
             ),
         )
 
-        shell("rsync -av {temp_dir_dorado}/calls.bam {bam_out}")
-
-        shell("module load dorado/{version}; dorado summary {bam_out} > {out_dir}/sequencing_summary.txt")
+        if (os.path.isfile(f"{temp_dir_dorado}/calls.bam")) and (not os.path.isfile(bam_out)):
+            print(f"Processing BAMs in subdirectory")
+            shell("rsync -av {temp_dir_dorado}/calls.bam {bam_out}")
+            shell("module load dorado/{version}; dorado summary {bam_out} > {out_dir}/sequencing_summary.txt")
 
         # Collect FASTQ files
         print(f"Processing FASTQs in subdirectory")
@@ -374,11 +336,7 @@ rule zip_files_tag:
             **wildcards, version=info_dict["version"], model=info_dict["model"]
         )
 
-
         os.makedirs(out_dir, exist_ok=True)
-
-
-        print(f"Processing BAMs in subdirectory")
 
         bam_out = os.path.join(
             out_dir,
@@ -397,9 +355,10 @@ rule zip_files_tag:
             ),
         )
 
-        shell("rsync -av {temp_dir_dorado}/calls.bam {bam_out}")
-
-        shell("module load dorado/{version}; dorado summary {bam_out} > {out_dir}/sequencing_summary.txt")
+        if (os.path.isfile(f"{temp_dir_dorado}/calls.bam")) and (not os.path.isfile(bam_out)):
+            print(f"Processing BAMs in subdirectory")
+            shell("rsync -av {temp_dir_dorado}/calls.bam {bam_out}")
+            shell("module load dorado/{version}; dorado summary {bam_out} > {out_dir}/sequencing_summary.txt")
 
         # Collect FASTQ files
         print(f"Processing FASTQs in subdirectory")
