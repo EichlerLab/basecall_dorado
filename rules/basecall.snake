@@ -66,12 +66,12 @@ rule basecall_dorado:
         bc_args=get_bc_args,
     resources:
         hrs=96,
-        mem=4,
+        mem=6,
         cuda=lambda wildcards, attempt: f"-l cuda={min(2**(attempt), 8)}", # starts with 2 cuda
         gpu="TRUE",
         testing="FALSE",
         load=100,
-    threads: lambda wildcards, attempt: min((2**(attempt))*10, 80)
+    threads: lambda wildcards, attempt: (2**(attempt))*6 ## (2^attempt)*mem
     run:
         version = wildcards.version_dash.replace("-",".")
 
@@ -130,6 +130,7 @@ rule basecall_dorado:
         """nvidia-smi; """
             """dorado basecaller """
             """--recursive """
+            """--min-qscore 10 """
             """{params.bc_args} """
             """--device cuda:all """
             """${{DORADO_MODEL_PATH}}/{cfg} """
@@ -389,15 +390,19 @@ rule zip_files_tag:
         "samtools fqidx {fastq_out}; chmod 644 {fastq_out};"
         )
 
-        # MD5
-        md5_out_file_name = os.path.join(
-            BASECALL_DORADO_MD5_PATTERN.format(run_id=info_dict["cell"])
-        )
+        if os.path.isfile(f"{fastq_out}.fai"):
+            # MD5
+            md5_out_file_name = os.path.join(
+                BASECALL_DORADO_MD5_PATTERN.format(run_id=info_dict["cell"])
+            )
 
-        shell(
-            """cd {out_dir}; """
-            """md5sum $(find . -type f | grep -Fv {md5_out_file_name}) > {md5_out_file_name}"""
-        )
+            shell(
+                """cd {out_dir}; """
+                """md5sum $(find . -type f | grep -Fv {md5_out_file_name}) > {md5_out_file_name}"""
+            )
+            shell(
+            "touch {output.flag}"
+            )
 
-        if os.path.exists(temp_dir_dorado):
-            shutil.rmtree(temp_dir_dorado)
+            if os.path.exists(temp_dir_dorado):
+                shutil.rmtree(temp_dir_dorado)
