@@ -180,7 +180,7 @@ rule zip_files:
         ),
     resources:
         hrs=48,
-        mem=12,
+        mem = lambda wildcards, attempt: 32*attempt,
         cuda="",
         gpu="FALSE",
         testing="FALSE",
@@ -296,7 +296,7 @@ rule zip_files_tag:
         ),
     resources:
         hrs=48,
-        mem=12,
+        mem = lambda wildcards, attempt: 32*attempt,
         cuda="",
         gpu="FALSE",
         testing="FALSE",
