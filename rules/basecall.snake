@@ -296,12 +296,12 @@ rule zip_files_tag:
         ),
     resources:
         hrs=48,
-        mem = lambda wildcards, attempt: 32*attempt,
+        mem = lambda wildcards, attempt: 4*attempt,
         cuda="",
         gpu="FALSE",
         testing="FALSE",
         load=50,
-    threads: 1
+    threads: 16
     run:
 
         version = wildcards.version_dash.replace("-",".")
@@ -383,7 +383,7 @@ rule zip_files_tag:
 
 
         shell(
-        "module load samtools/1.12 htslib/1.16; samtools fastq -T MM,ML {bam_out} | bgzip -c > {fastq_out}"
+        "module load samtools/1.12 htslib/1.16; samtools fastq -T MM,ML {bam_out} | bgzip -@ {thread} -c > {fastq_out}"
         )
  
         shell(
