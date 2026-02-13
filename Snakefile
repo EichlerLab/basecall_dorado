@@ -13,6 +13,7 @@ import pandas as pd
 import shutil
 import time
 import getpass
+import glob
 
 ### Get install directory ###
 
@@ -31,6 +32,8 @@ CELL_DF = pd.read_csv(
     CELL_DF_FILE_NAME, sep="\t", index_col=["SAMPLE", "SEQ_TYPE", "RUN_ID", "PROFILE"]
 )
 
+detected_dorado_version = [ dorado_path.split("/")[8] for dorado_path in glob.glob("/net/eichler/vol28/7200/software/modules-sw/dorado/*/Linux/Ubuntu22.04/x86_64/bin/dorado") ]
+
 ### Includes ###
 
 shell.prefix("source ~/.bash_profile; ")
@@ -41,7 +44,7 @@ wildcard_constraints:
     run_id="|".join(CELL_DF.index.get_level_values("RUN_ID")),
     profile="|".join(list(config["profile"].keys())),
     modbase="|".join(list(config["mod_base_profile"].keys())),
-#    version_dash="|".join(["0-7-2","0-7-3","0-8-2","0-9-6","1-0-2","1-1-1"])
+    version_dash = "|".join(detected_dorado_version)
 
 include: "rules/basecall.snake"
 
