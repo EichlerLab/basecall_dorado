@@ -267,7 +267,7 @@ rule zip_files:
 
 
         shell(
-        "module load samtools/1.12 htslib/1.16; samtools fastq {bam_out} | bgzip -@ {thread} -c > {fastq_out}"
+        "module load samtools/1.12 htslib/1.16; samtools fastq {bam_out} | bgzip -@ {threads} -c > {fastq_out}"
         )
  
         shell(
